@@ -1,0 +1,230 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model Profile {
+  id String @id @default(uuid())
+  userId String @unique
+  name String
+  imageUrl String @db.Text
+  lat Float 
+  lng Float
+  role MemberRole @default(GUEST)
+
+  lobbyId String
+  lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  servers Server[]
+  members Member[]
+  channels Channel[]
+  markers Marker[]
+  messages Message[]
+
+  @@index([lobbyId])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Server {
+  id String @id @default(uuid())
+  name String
+  imageUrl String @db.Text
+  inviteCode String @unique
+
+  profileId String
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  members Member[]
+  channels Channel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([profileId])
+}
+
+enum MemberRole {
+  ADMIN
+  MODERATOR
+  GUEST
+}
+
+model Member {
+  id String @id @default(uuid())
+  role MemberRole @default(GUEST)
+
+  profileId String
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  serverId String
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  // Messages Message[]
+  directMessage DirectMessage[]
+
+  conversationsInitiated Conversation[] @relation("MemberOne")
+  conversationsReceived Conversation[] @relation("MemberTwo")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([serverId])
+}
+
+enum ChannelType {
+  TEXT
+  AUDIO
+  VIDEO
+}
+
+model Channel {
+  id String @id @default(uuid())
+  name String
+  type ChannelType @default(TEXT)
+
+  profileId String
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  serverId String
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  // messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([serverId])
+}
+
+model Message {
+  id String @id @default(uuid())
+  content String @db.Text
+
+  fileUrl String? @db.Text
+
+  // memberId String
+  // member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  // channelId String
+  // channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  profileId String
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  lobbyId String
+  lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)  
+
+  deleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // @@index([memberId])
+  // @@index([channelId])
+  @@index([profileId])
+  @@index([lobbyId])
+}
+
+model Conversation {
+  id String @id @default(uuid())
+
+  memberOneId String
+  memberOne Member @relation("MemberOne", fields: [memberOneId], references: [id], onDelete: Cascade)
+  
+  memberTwoId String
+  memberTwo Member @relation("MemberTwo", fields: [memberTwoId], references: [id], onDelete: Cascade)
+
+  directMessages DirectMessage[]
+
+  @@index([memberTwoId])
+
+  @@unique([memberOneId, memberTwoId])
+}
+
+model DirectMessage {
+  id String @id @default(uuid())
+  content String @db.Text
+  fileUrl String? @db.Text
+
+  memberId String
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade) 
+
+  conversationId String
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deleted Boolean @default(false)
+
+  @@index([memberId])
+  @@index([conversationId])
+}
+
+// --- Entidades Nearest --- 
+
+// Entidade Place
+model Place {
+  id String @id @default(uuid())
+  name String 
+  imageUrl String? @db.Text 
+
+  markers Marker[]
+
+  lobbyId String? @unique
+  lobby Lobby? @relation(fields: [lobbyId], references: [id])
+}
+
+
+// Entidade Lobby
+model Lobby {
+  id String @id @default(uuid())
+  name String
+  pin Int? 
+  inviteCode String @unique
+  
+  profiles Profile[]
+  messages Message[]
+
+  // Ideia: Colocar uma array de lugares para o lobby em específico
+  place Place?
+  nearestPlace Marker?
+
+  result Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Entidade Marker
+model Marker {
+  id String @id @default(uuid())
+  lat Float
+  lng Float
+  address String?
+
+  profileId String?
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  placeId String? 
+  place Place? @relation(fields: [placeId], references: [id], onDelete: Cascade) 
+
+  lobby Lobby? @relation(fields: [lobbyId], references: [id])
+  lobbyId String? @unique 
+
+  @@index([profileId])
+  @@index([lobbyId])
+  @@index([placeId])
+}
