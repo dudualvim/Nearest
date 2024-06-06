@@ -41,7 +41,7 @@ const ThemeButton: React.FC = () => {
   }, [isDarkMode]);
 
   return (
-    <div className="container">
+    <div className="containerTheme">
       <div className="box bigger">
         <div className="scenary">
           <img
