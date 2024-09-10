@@ -7,6 +7,8 @@ import Cards from "./components/Cards";
 import Search from "./components/Search";
 import Type from "./components/Type";
 import ThemeButton from './components/ThemeButton';
+import React from 'react';
+
 
 const Page = () => {
 
